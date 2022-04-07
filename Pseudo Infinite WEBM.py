@@ -10,8 +10,8 @@ import os.path
 from os.path import exists
 import subprocess
 import sys
-import multiprocessing
 from signal import signal, SIGTERM
+import shlex
 
 
 # Thank you, https://stackoverflow.com/a/57081121
@@ -25,7 +25,7 @@ def run_ffmpeg(command):
     # Prepare Path to FFMPEG
     ffmpeg_path = "ffmpeg//ffmpeg.exe"
 
-    new_command = command.split()
+    new_command = shlex.split(command)
     new_command[0] = resource_path(ffmpeg_path)
 
     subprocess.call(new_command)
@@ -42,7 +42,7 @@ def quit_handler():
 
 
 def fuck_video(file_to_fuck):
-    command_1 = f"ffmpeg -y -v quiet -stats -i {file_to_fuck} -c:v libvpx-vp9 -strict -2 -c:a libopus TEMP_FILE.mp4"
+    command_1 = f"ffmpeg -y -v quiet -stats -i \"{file_to_fuck}\" -c:v libvpx-vp9 -strict -2 -c:a libopus TEMP_FILE.mp4"
     if override:
         command_2 = f"ffmpeg -y -v quiet -stats -stream_loop {loop_count} -i TEMP_FILE.mp4 -c copy {file_name}.webm"
     else:
@@ -50,7 +50,11 @@ def fuck_video(file_to_fuck):
 
     print("\nPreparing video file...")
     run_ffmpeg(command_1)
-    print("Video file prepared.")
+    if exists("TEMP_FILE.mp4"):
+        print("Video file prepared.")
+    else:
+        print("Something went wrong and TEMP_FILE could not be made Please report this on the GitHub.")
+        sys.exit(1)
 
     print("\nLooping video file...")
     run_ffmpeg(command_2)
@@ -117,8 +121,5 @@ if loop_count == -1:
     print("There is a hardcoded limit of 100MB on the infinite loop function. To override this, type override below.")
     print("or just press Enter to continue. You have been warned.")
     override = True if input() == "override" else False
-
-proc = multiprocessing.Process(target=quit_handler, args=())
-proc.start()
 
 fuck_video(f"{in_file}")
